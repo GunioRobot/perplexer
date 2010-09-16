@@ -7,7 +7,6 @@ import Data.Char
 import Data.Array
 import Data.List
 import Data.Maybe
-import Debug.Trace
 import System.Random ( randomR, mkStdGen, StdGen )
 
 data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read)
@@ -73,7 +72,7 @@ hasWall (Maze arr) (i,j) (n,m)
     | j == m-1 = r
     | i == n+1 = b
     | i == n-1 = a
-  where (l,a,r,b) = (arr!(i,j))
+  where (l,a,r,b) = arr!(i,j)
 
 removeRandomWalls _ _ _ 0 g = ([],g)
 removeRandomWalls maze@(Maze a) n m r g =
@@ -121,7 +120,8 @@ mkGame n m g =
 
 wallOrWay b | b == True = "wall" | b == False = "corridor"
 
-getOptions (l,a,r,_) = "There is a "++(wallOrWay l)++" to the left, a "++(wallOrWay a)++" ahead, and a "++(wallOrWay r)++" to the right."
+getOptions (l,a,r,_) = "There is a "++(wallOrWay l)++" to the left, a "++
+  (wallOrWay a)++" ahead, and a "++(wallOrWay r)++" to the right."
 
 instance Show Game where
   show (Game (Maze m, h, (p:_), _, _, _)) = getOptions $ rotateWalls h $ m!p
@@ -135,7 +135,7 @@ printVerticalWall ix = do
   Game (Maze m, h, p, e, _, _) <- get
   let
     (a,_,_,_) = m!ix
-    start     = (last p) == ix
+    start     = last p == ix
     exit      = e == ix
     path      = ix `elem` p
     x = case  (start,exit,path) of
@@ -247,5 +247,5 @@ loop = forever (do
   
 main = do
   (n:m:seed:[]) <- getArgs
-  s <- execStateT loop $ mkGame (read m) (read n) $ mkStdGen (read seed)
+  s <- execStateT loop $ mkGame (read n) (read m) $ mkStdGen (read seed)
   return ()
