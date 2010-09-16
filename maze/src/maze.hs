@@ -79,8 +79,8 @@ removeRandomWalls _ _ _ 1 g = ([],g)
 removeRandomWalls _ _ _ 0 g = ([],g)
 removeRandomWalls maze@(Maze a) n m r g =
   let
-    (x1, g1) = randomR (1,n) g
-    (x2, g2) = randomR (1,m) g1
+    (x1,g1) = randomR (1,n) g
+    (x2,g2) = randomR (1,m) g1
     x = (x1,x2)
     rxs1 = filterInRange x n m
     rxs = filter (hasWall maze x) rxs1
@@ -89,7 +89,7 @@ removeRandomWalls maze@(Maze a) n m r g =
       removeRandomWalls maze n m (r-1) g2
     else
       let
-        (w , g3) = randomR (0,(length rxs)-1) g2
+        (w,g3) = randomR (0,(length rxs)-1) g2
         y = rxs!!w 
         rem = removeWall (a!x) (a!y) x y
         (cand, g4) = removeRandomWalls maze n m (r-2) g3
@@ -198,7 +198,7 @@ next (TURN d) = do
 next LOOK = return ()
 
 next (NEW n m) = do
-  Game (_,_,_,_,g,_) <- get
+  Game (_, _, _, _, g, _) <- get
   put $ mkGame n m g
 
 next SHOW = printMaze
@@ -218,7 +218,7 @@ next LOAD = do
     Just g  -> put g
   
 checkSuccess = do
-  Game (Maze a, _, p:ps, l, gen, sp)<- get
+  Game (Maze a, _, p:ps, l, gen, sp) <- get
   if p == l
     then
       do
@@ -248,6 +248,6 @@ loop = forever (do
     (c1,_):cs -> next c1)
   
 main = do
-  (n:m:seed:[]) <- getArgs
-  s <- execStateT loop $ mkGame (read n) (read m) $ mkStdGen (read seed)
+  n:m:seed:[] <- (liftM $ map read) getArgs
+  s <- execStateT loop $ mkGame n m $ mkStdGen seed
   return ()
