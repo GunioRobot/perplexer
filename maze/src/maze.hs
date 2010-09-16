@@ -6,16 +6,17 @@ import Control.Monad.Trans
 import Data.Char
 import Data.Array
 import Data.List
+import Data.Maybe
 import System.Random ( randomR, mkStdGen, StdGen )
 
 data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read)
 data Heading = N | W | S | E deriving (Show, Eq, Ord)
-data Command = MOVE | TURN Direction | LOOK | NEW Int Int | SHOW | RESET deriving (Show, Eq, Ord, Read)
+data Command = MOVE | TURN Direction | LOOK | NEW Int Int | SHOW | RESET | SAVE | LOAD deriving (Show, Eq, Ord, Read)
 type Walls = (Bool, Bool, Bool, Bool)
 type Location = (Int,Int) 
 type Path = [Location]
 newtype Maze = Maze (Array Location Walls) deriving (Show, Eq, Ord)
-newtype Game = Game (Maze, Heading, Path, Location, StdGen)
+newtype Game = Game (Maze, Heading, Path, Location, StdGen, Maybe Game)
 
 chooseLocation cs g =
   let
@@ -80,14 +81,14 @@ mkGame n m g =
     end = (x3,x4)
     (maze,g5) = mkMaze n m start g4
   in
-    Game (maze, N, [start], end, g5)
+    Game (maze, N, [start], end, g5, Nothing)
 
-wallOrWay b | True = "wall" | False = "corridor"
+wallOrWay b | b == True = "wall" | b == False = "corridor"
 
 getOptions (l,a,r,_) = "There is a "++(wallOrWay l)++" to the left, a "++(wallOrWay a)++" ahead, and a "++(wallOrWay r)++" to the right."
 
 instance Show Game where
-  show (Game (Maze m, h, (p:_), _, _)) = getOptions $ rotateWalls h $ m!p
+  show (Game (Maze m, h, (p:_), _, _, _)) = getOptions $ rotateWalls h $ m!p
 
 printHorizontalWall True  (_,True,_,_)   = " -" 
 printHorizontalWall True  (_,False,_,_)  = "  "
@@ -95,7 +96,7 @@ printHorizontalWall False (_,_,_,True)   = " -"
 printHorizontalWall False (_,_,_,False)  = "  "
 
 printVerticalWall ix = do
-  Game (Maze m, h, p, e, _) <- get
+  Game (Maze m, h, p, e, _, _) <- get
   let
     (a,_,_,_) = m!ix
     start     = (last p) == ix
@@ -111,7 +112,7 @@ printVerticalWall ix = do
     False -> lift $ putStr [' ',x]
     
 printHorizontal m i u = do
-  Game (Maze a, _, _, _, _) <- get
+  Game (Maze a, _, _, _, _, _) <- get
   forM_ [ (a!(i,j)) | j <- [1..m] ] $ lift . putStr . (printHorizontalWall u)
   lift $ putStrLn " "
 
@@ -124,7 +125,7 @@ printSection m i = do
   printHorizontal m i False
       
 printMaze = do
-  (Game (Maze a, _, _, _, _)) <- get
+  Game (Maze a, _, _, _, _, _) <- get
   let ((_,_),(n,m)) = bounds a
   printHorizontal m n True
   forM_ [n,(n-1)..1] $ printSection m
@@ -148,28 +149,38 @@ increaseLocation m h p@(i,j) =
         E -> if r then p else (i,j+1)
     
 next MOVE = do
-  Game (Maze m, h, p@(p1:ps), l, g) <- get
+  Game (Maze m, h, p@(p1:ps), l, g, sp) <- get
   let i = increaseLocation m h p1
-  put $ Game (Maze m, h, i:p, l, g)
+  put $ Game (Maze m, h, i:p, l, g, sp)
 
 next (TURN d) = do
-  Game (m, h, p, l, g) <- get
-  put $ Game (m, rotateHeading h d, p, l, g)
+  Game (m, h, p, l, g, sp) <- get
+  put $ Game (m, rotateHeading h d, p, l, g, sp)
 
 next LOOK = return ()
 
 next (NEW n m) = do
-  Game (_,_,_,_,g) <- get
+  Game (_,_,_,_,g,_) <- get
   put $ mkGame n m g
 
 next SHOW = printMaze
 
 next RESET = do
-  Game (m, _, p, l, g) <- get
-  put $ Game (m, N, [(last p)], l, g)
+  Game (m, _, p, l, g, sp) <- get
+  put $ Game (m, N, [(last p)], l, g, Nothing)
 
+next SAVE = do
+  game@(Game (m, h, p, l, g, sp)) <- get
+  put $ Game (m, h, p, l, g, Just game)
+
+next LOAD = do
+  Game (_, _, _, _, _, sp) <- get
+  case sp of
+    Nothing -> return ()
+    Just g  -> put g
+  
 checkSuccess = do
-  Game (Maze a, _, p:ps, l, gen)<- get
+  Game (Maze a, _, p:ps, l, gen, sp)<- get
   if p == l
     then
       do
