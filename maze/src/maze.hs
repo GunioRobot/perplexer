@@ -205,7 +205,7 @@ next SHOW = printMaze
 
 next RESET = do
   Game (m, _, p, l, g, sp) <- get
-  put $ Game (m, N, [(last p)], l, g, Nothing)
+  put $ Game (m, N, [last p], l, g, Nothing)
 
 next SAVE = do
   game@(Game (m, h, p, l, g, sp)) <- get
