@@ -185,6 +185,7 @@ checkSuccess = do
     then
       do
         lift $ print "Congratulations. You did it."
+        next SHOW
         lift $ print "Starting new game..."
         let
           ((_,_),(n,m)) = bounds a        
