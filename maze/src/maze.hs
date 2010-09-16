@@ -11,7 +11,8 @@ import System.Random ( randomR, mkStdGen, StdGen )
 
 data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read)
 data Heading = N | W | S | E deriving (Show, Eq, Ord)
-data Command = MOVE | TURN Direction | LOOK | NEW Int Int | SHOW | RESET | SAVE | LOAD deriving (Show, Eq, Ord, Read)
+data Command = MOVE | TURN Direction | LOOK | NEW Int Int
+             | SHOW | RESET | SAVE | LOAD deriving (Show, Eq, Ord, Read)
 type Walls = (Bool, Bool, Bool, Bool)
 type Location = (Int,Int) 
 type Path = [Location]
@@ -74,6 +75,7 @@ hasWall (Maze arr) (i,j) (n,m)
     | i == n-1 = a
   where (l,a,r,b) = arr!(i,j)
 
+removeRandomWalls _ _ _ 1 g = ([],g)
 removeRandomWalls _ _ _ 0 g = ([],g)
 removeRandomWalls maze@(Maze a) n m r g =
   let
@@ -84,13 +86,13 @@ removeRandomWalls maze@(Maze a) n m r g =
     rxs = filter (hasWall maze x) rxs1
   in
     if ((length rxs) == 0) then
-      removeRandomWalls maze n m r g2
+      removeRandomWalls maze n m (r-1) g2
     else
       let
         (w , g3) = randomR (0,(length rxs)-1) g2
         y = rxs!!w 
         rem = removeWall (a!x) (a!y) x y
-        (cand, g4) = removeRandomWalls maze n m (r-1) g3
+        (cand, g4) = removeRandomWalls maze n m (r-2) g3
       in
         (rem++(cand),g4)
  
@@ -102,7 +104,7 @@ mkMaze n m s g =
     (ps,g2) = mkPaths maze nbs [s] n m g
     rn = 2 + ((n*m) `div` 100)
     arr2 =  arr // (mergeUpdates ps)
-    (rps,g3) = removeRandomWalls (Maze arr2) n m rn g2
+    (rps,g3) = removeRandomWalls (Maze arr2) n m (2*rn) g2
   in
     (Maze $ arr2 // (mergeUpdates rps),g3)
 
