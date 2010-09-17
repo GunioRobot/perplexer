@@ -31,5 +31,5 @@ fi
 
 mkFifo mazeOut
 
-tail -f mazeIn | ./maze $1 $2 $3 > mazeOut &
+tail -f mazeIn | ./Main $1 $2 $3 > mazeOut &
 
