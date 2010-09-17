@@ -11,9 +11,11 @@ import Data.List
 import System.Random ( StdGen, randomR )
 
 type Walls = (Bool, Bool, Bool, Bool)
-type Location = (Int,Int) 
+type Location = (Int,Int)
+type Update = (Location,Walls)
 newtype Maze = Maze (Array Location Walls) deriving (Show, Eq, Ord)
 
+chooseLocation :: [(Location,Location)] -> StdGen -> ((Location,Location), StdGen)
 chooseLocation cs g =
   let
     n = length cs
@@ -21,8 +23,10 @@ chooseLocation cs g =
   in 
     (cs!!i,ng)
 
+mergeWalls :: Update -> Update -> Update
 mergeWalls (loc,(l,a,r,b)) (loc1,(l1,a1,r1,b1)) = (loc,(l&&l1,a&&a1,r&&r1,b&&b1))
 
+mergeUpdates :: [Update] -> [Update]
 mergeUpdates us =
   let
     firstEq (l,_) (r,_) = l == r
@@ -32,25 +36,29 @@ mergeUpdates us =
   in
     map (foldr mergeWalls ((1,1),(True, True, True, True))) gs
 
+removeWall :: Walls -> Walls -> Location -> Location -> [Update]
 removeWall (l,a,r,b) (l1,a1,r1,b1) loc1@(i,j) loc2@(n,m)
   | j == m+1 = [(loc1, (False,a,r,b)), (loc2, (l1,a1,False,b1))]
   | j == m-1 = [(loc1, (l,a,False,b)), (loc2, (False,a1,r1,b1))]
   | i == n+1 = [(loc1, (l,a,r,False)), (loc2, (l1,False,r1,b1))]
   | i == n-1 = [(loc1, (l,False,r,b)), (loc2, (l1,a1,r1,False))]
 
+filterInRange :: Location -> Int -> Int -> [Location]
 filterInRange (i,j) n m =
   let
     ls = [(i-1,j),(i+1,j),(i,j-1),(i,j+1)]
   in
     filter (inRange ((1,1),(n,m))) ls
-  
+
+getNeighbors :: Location -> [Location] -> Int -> Int -> [(Location,Location)]
 getNeighbors (i,j) mazeElements n m =
   let
     fs = filterInRange (i,j) n m
     xs = filter (\i -> not $ elem i mazeElements) fs
   in
     map (\nl -> ((i,j),nl)) xs
-  
+
+mkPaths :: Maze -> [(Location,Location)] -> [Location] -> Int -> Int -> StdGen -> ([Update],StdGen)
 mkPaths _ [] _ _ _ g = ([],g)
 mkPaths maze@(Maze arr) candidates mazeElements n m g =
   let
@@ -63,13 +71,16 @@ mkPaths maze@(Maze arr) candidates mazeElements n m g =
   in
     (ws++ps,g3)
 
+hasWall :: Maze -> Location -> Location -> Bool
 hasWall (Maze arr) (i,j) (n,m)
     | j == m+1 = l
     | j == m-1 = r
     | i == n+1 = b
     | i == n-1 = a
+    | otherwise = False
   where (l,a,r,b) = arr!(i,j)
 
+removeRandomWalls :: Maze -> Int -> Int -> Int -> StdGen -> ([Update],StdGen)
 removeRandomWalls _ _ _ 1 g = ([],g)
 removeRandomWalls _ _ _ 0 g = ([],g)
 removeRandomWalls maze@(Maze a) n m r g =

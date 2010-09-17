@@ -10,6 +10,7 @@ import Maze
 import Game
 import Command
 
+loop :: GameState
 loop = forever (do
   checkSuccess
 
@@ -24,7 +25,8 @@ loop = forever (do
   case c of
     [] -> return ()
     (c1,_):cs -> next c1)
-  
+
+main :: IO ()
 main = do
   n:m:seed:[] <- (liftM $ map read) getArgs
   s <- execStateT loop $ mkGame n m $ mkStdGen seed

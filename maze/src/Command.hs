@@ -21,10 +21,11 @@ data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read)
 data Command = MOVE | TURN Direction | LOOK | NEW Int Int
              | SHOW | RESET | SAVE | LOAD deriving (Show, Eq, Ord, Read)
 
+rotateHeading :: Heading -> Direction -> Heading
 rotateHeading h LEFT = case h of { N -> W; W -> S; S -> E; E -> N }
-
 rotateHeading h RIGHT = case h of { N -> E; W -> N; S -> W; E -> S }
 
+increaseLocation :: Array Location Walls -> Heading -> Location -> Location
 increaseLocation m h p@(i,j) =
     let (l,a,r,b) = m!p in
       case h of
@@ -32,7 +33,8 @@ increaseLocation m h p@(i,j) =
         W -> if l then p else (i,j-1)
         S -> if b then p else (i-1,j)
         E -> if r then p else (i,j+1)
-    
+
+next :: Command -> GameState
 next MOVE = do
   Game (Maze m, h, p@(p1:ps), l, g, sp) <- get
   let i = increaseLocation m h p1
@@ -63,7 +65,8 @@ next LOAD = do
   case sp of
     Nothing -> return ()
     Just g  -> put g
-  
+
+checkSuccess :: GameState
 checkSuccess = do
   Game (Maze a, _, p:ps, l, gen, sp) <- get
   if p == l
