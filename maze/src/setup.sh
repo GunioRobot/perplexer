@@ -4,6 +4,7 @@ function usage() {
 
 export rows=$1
 export columns=$2
+export seed=$3
 
 if [ -z $rows ]
 then
@@ -17,10 +18,18 @@ then
   exit 0
 fi
 
+if [ -z $seed ]
+then
+  usage
+  exit 0
+fi
+
 if [ -e mazeIn ]
 then
     rm mazeIn
 fi
+
+ghc -imaze -o MazeMain --make Main
 
 mkFifo mazeIn
 
@@ -31,5 +40,5 @@ fi
 
 mkFifo mazeOut
 
-tail -f mazeIn | ./Main $1 $2 $3 > mazeOut &
+tail -f mazeIn | ./MazeMain $rows $columns $seed > mazeOut &
 
