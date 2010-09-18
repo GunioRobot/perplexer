@@ -4,6 +4,7 @@ module Command
   ,Command (..)
   ,next
   ,checkSuccess
+  ,rotateHeading
   ) where
 
 import System.IO
@@ -74,10 +75,5 @@ checkSuccess = do
       do
         lift $ print "Congratulations. You did it."
         next SHOW
-        lift $ print "Starting new game..."
-        let
-          ((_,_),(n,m)) = bounds a        
-          ng = mkGame n m gen
-        put ng
     else
       return ()
