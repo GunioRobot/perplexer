@@ -60,7 +60,6 @@ executeRaw' fOut cs = do
 executeRaw :: FilePath -> Command -> IO ()
 executeRaw fOut command = do
   hOut <- openFile fOut AppendMode
-  hSetBuffering hOut NoBuffering
   hPrint hOut command
   hClose hOut
   putStr "."
@@ -78,9 +77,6 @@ getStatus :: FilePath -> IO Status
 -- getStatus h | trace ("getStatus"++show h) False = do undefined
 getStatus fIn = do
   hIn <- openFile fIn ReadMode
-  hSetBuffering hIn NoBuffering
-  str <- hShow hIn
-  -- trace (str) return ()
   line <- hGetLine hIn
   -- trace line return ()
   status <- return $ read line
@@ -105,6 +101,8 @@ tryAhead fIn fOut _ h l@(l1:ls) = do
   return (s2,MOVE:c,l2)
 
 tryTurn :: Direction -> FilePath -> FilePath -> Status -> Heading -> [(Int,Int)] -> IO (Status,[Command],[(Int,Int)])
+tryTurn LEFT _ _ s@(Status (True,_,_)) _ l = return (s,[],l)
+tryTurn RIGHT _ _ s@(Status (_,_,True)) _ l = return (s,[],l)
 tryTurn dir fIn fOut status h l = do
   let
     rdir = case dir of
@@ -144,7 +142,6 @@ consume fIn silent = do
        threadDelay 10000
      else
        trace l return ()
-  -- trace l return ()
   b <- hReady hIn
   hClose hIn
   if (b)
