@@ -62,8 +62,6 @@ executeRaw fOut command = do
   hOut <- openFile fOut AppendMode
   hPrint hOut command
   hClose hOut
-  putStr "."
-  hFlush stdout
 
 execute :: FilePath -> FilePath -> Command -> IO Status
 -- execute _ _ c | trace ("execute: "++show c) False = undefined
@@ -98,6 +96,8 @@ tryAhead fIn fOut _ h l@(l1:ls) = do
   case s2 of
     SUCCESS -> return ()
     _ -> execute' fIn fOut [TURN LEFT,TURN LEFT,MOVE,TURN LEFT,TURN LEFT]
+  putStr "."
+  hFlush stdout
   return (s2,MOVE:c,l2)
 
 tryTurn :: Direction -> FilePath -> FilePath -> Status -> Heading -> [(Int,Int)] -> IO (Status,[Command],[(Int,Int)])
@@ -139,7 +139,7 @@ consume fIn silent = do
   l <- hGetLine hIn
   if ((isPrefixOf "There" l) || (isPrefixOf "\"Congrat" l) || silent)
      then
-       threadDelay 10000
+       threadDelay 20000
      else
        trace l return ()
   b <- hReady hIn
@@ -163,7 +163,13 @@ main = do
   putStrLn ""
   putStrLn "Solving Maze. Hang tight."
   t <- execute fIn fOut RESET
-  (s,c,_) <- move t fIn fOut N [(0,0)]
+  (s,c,l) <- move t fIn fOut N [(0,0)]
+  (s,c,l) <- case s of
+    SUCCESS -> return (s,c,l)
+    otherwise -> do
+      t <- execute fIn fOut $ TURN LEFT
+      (s,c,l) <- move t fIn fOut W l
+      return (s,(TURN LEFT):c,l)
   putStrLn ""
   putStrLn ""
   putStrLn "Here's the path:"
