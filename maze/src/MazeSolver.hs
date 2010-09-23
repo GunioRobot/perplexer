@@ -4,10 +4,7 @@ import Data.List
 import System
 import System.IO
 import Control.Monad
-import Control.Monad.State
-import Control.Monad.Trans
 import System.Random ( mkStdGen )
-import Debug.Trace
 import Control.Concurrent
 
 data Status = Status (Bool,Bool,Bool) | SUCCESS deriving (Show, Eq)
@@ -48,33 +45,26 @@ instance Read Status where
         (s1, r1)  <- lex r1
         b3 <- return $ wallOrWay s1
         return (Status (b1,b2,b3),"")
-              
-execute' :: FilePath -> FilePath -> [Command] -> IO ()
-execute' fIn fOut cs = do
-  forM_ cs (execute fIn fOut)
-
-executeRaw' :: FilePath -> [Command] -> IO ()
-executeRaw' fOut cs = do
-  forM_ cs (executeRaw fOut)
 
 executeRaw :: FilePath -> Command -> IO ()
 executeRaw fOut cmd = withFile fOut AppendMode (\h -> hPrint h cmd)
+        
+executeRaw' :: FilePath -> [Command] -> IO ()
+executeRaw' fOut cs = forM_ cs (executeRaw fOut)
 
 execute :: FilePath -> FilePath -> Command -> IO Status
 execute fIn fOut command = do
   executeRaw fOut command
   withFile fIn ReadMode getStatus
 
+execute' :: FilePath -> FilePath -> [Command] -> IO ()
+execute' fIn fOut cs = forM_ cs (execute fIn fOut)
+
 getStatus :: Handle -> IO Status
-getStatus hIn = do
-  line <- hGetLine hIn
-  return $ read line
+getStatus hIn = liftM read $ hGetLine hIn
 
 incr :: Heading -> (Int,Int) -> (Int,Int)
-incr N (i,j) = (i+1,j)
-incr S (i,j) = (i-1,j)
-incr W (i,j) = (i,j+1)
-incr E (i,j) = (i,j-1)
+incr h (i,j) = case h of { N -> (i+1,j); S -> (i-1,j); W -> (i,j+1); E -> (i,j-1) }
 
 tryAhead :: FilePath -> FilePath -> Status -> Heading -> [(Int,Int)] -> IO (Status,[Command],[(Int,Int)])
 tryAhead _ _ s@(Status (_,True,_)) _ l = return (s,[],l)
@@ -92,15 +82,12 @@ tryTurn :: Direction -> FilePath -> FilePath -> Status -> Heading -> [(Int,Int)]
 tryTurn LEFT _ _ s@(Status (True,_,_)) _ l = return (s,[],l)
 tryTurn RIGHT _ _ s@(Status (_,_,True)) _ l = return (s,[],l)
 tryTurn dir fIn fOut status h l = do
-  let
-    rdir = case dir of
-      LEFT -> RIGHT
-      RIGHT -> LEFT
+  let rdir = case dir of { LEFT -> RIGHT; RIGHT -> LEFT }
   s <- execute fIn fOut $ TURN dir
-  res@(s2,c2,l2) <- tryAhead fIn fOut s (rotateHeading h dir) l
+  (s2,c2,l2) <- tryAhead fIn fOut s (rotateHeading h dir) l
   case s2 of
-    SUCCESS -> return ()
-    _ -> do { execute fIn fOut $ TURN rdir; return () }
+    st@SUCCESS -> return st
+    _ -> execute fIn fOut $ TURN rdir
   return (s2,(TURN dir):c2,l2)
 
 move :: Status -> FilePath -> FilePath -> Heading -> [(Int,Int)] -> IO (Status, [Command], [(Int,Int)])
@@ -124,19 +111,12 @@ consume fIn silent = do
   hIn <- openFile fIn ReadMode
   hSetBuffering hIn NoBuffering
   l <- hGetLine hIn
-  if ((isPrefixOf "There" l) || (isPrefixOf "\"Congrat" l) || silent)
-     then
-       threadDelay 20000
-     else
-       trace l return ()
+  if (isPrefixOf "There" l || isPrefixOf "\"Congrat" l || silent)
+    then threadDelay 20000
+    else putStrLn l
   b <- hReady hIn
   hClose hIn
-  if (b)
-    then
-      do
-        consume fIn silent
-    else
-      return ()
+  if (b) then consume fIn silent else return ()
 
 main :: IO ()
 main = do
