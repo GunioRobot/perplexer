@@ -124,11 +124,9 @@ main = do
   executeRaw fOut RESET
   consume fIn True
   executeRaw fOut SHOW
-  putStrLn ""
-  putStrLn "Here is the Maze"
+  putStrLn "\nHere is the Maze"
   consume fIn False
-  putStrLn ""
-  putStrLn "Solving Maze. Hang tight."
+  putStrLn "\nSolving Maze. Hang tight."
   t <- execute fIn fOut RESET
   (s,c,l) <- move t fIn fOut N [(0,0)]
   (s,c,l) <- case s of
@@ -137,16 +135,11 @@ main = do
       t <- execute fIn fOut $ TURN LEFT
       (s,c,l) <- move t fIn fOut W l
       return (s,(TURN LEFT):c,l)
-  putStrLn ""
-  putStrLn ""
-  putStrLn "Here's the path:"
+  putStrLn "\n\nHere's the path:"
   print c
-  putStrLn ""
-  putStr "Walking the path..."
+  putStr "\nWalking the path..."
   executeRaw fOut RESET
   consume fIn True
   executeRaw' fOut c
-  putStrLn ""
-  putStrLn "Here's the solved maze:"
-  putStrLn ""
+  putStrLn "\nHere's the solved maze:\n"
   consume fIn False
