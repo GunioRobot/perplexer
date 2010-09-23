@@ -68,8 +68,7 @@ execute fIn fOut command = do
 getStatus :: Handle -> IO Status
 getStatus hIn = do
   line <- hGetLine hIn
-  let status = read line
-  return status
+  return $ read line
 
 incr :: Heading -> (Int,Int) -> (Int,Int)
 incr N (i,j) = (i+1,j)
