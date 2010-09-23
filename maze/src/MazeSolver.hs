@@ -58,28 +58,18 @@ executeRaw' fOut cs = do
   forM_ cs (executeRaw fOut)
 
 executeRaw :: FilePath -> Command -> IO ()
-executeRaw fOut command = do
-  hOut <- openFile fOut AppendMode
-  hPrint hOut command
-  hClose hOut
+executeRaw fOut cmd = withFile fOut AppendMode (\h -> hPrint h cmd)
 
 execute :: FilePath -> FilePath -> Command -> IO Status
--- execute _ _ c | trace ("execute: "++show c) False = undefined
 execute fIn fOut command = do
   executeRaw fOut command
-  st <- getStatus fIn
---  trace ("status: "++(show st)) return ()
-  return st
+  withFile fIn ReadMode getStatus
 
-getStatus :: FilePath -> IO Status
--- getStatus h | trace ("getStatus"++show h) False = do undefined
-getStatus fIn = do
-  hIn <- openFile fIn ReadMode
+getStatus :: Handle -> IO Status
+getStatus hIn = do
   line <- hGetLine hIn
-  -- trace line return ()
-  status <- return $ read line
-  hClose hIn
-  return $ status
+  let status = read line
+  return status
 
 incr :: Heading -> (Int,Int) -> (Int,Int)
 incr N (i,j) = (i+1,j)
@@ -88,7 +78,6 @@ incr W (i,j) = (i,j+1)
 incr E (i,j) = (i,j-1)
 
 tryAhead :: FilePath -> FilePath -> Status -> Heading -> [(Int,Int)] -> IO (Status,[Command],[(Int,Int)])
--- tryAhead _ _ s h l | trace ("tryAhead: "++(show s)) False = undefined
 tryAhead _ _ s@(Status (_,True,_)) _ l = return (s,[],l)
 tryAhead fIn fOut _ h l@(l1:ls) = do
   s <- execute fIn fOut MOVE
@@ -116,7 +105,6 @@ tryTurn dir fIn fOut status h l = do
   return (s2,(TURN dir):c2,l2)
 
 move :: Status -> FilePath -> FilePath -> Heading -> [(Int,Int)] -> IO (Status, [Command], [(Int,Int)])
--- move s _ _ _ _ | trace ("move: "++show s) False = undefined
 move s@SUCCESS _ _ _ ls = do { putStrLn ""; return (s, [], ls) }
 move status@(Status (b1,b2,b3)) fIn fOut h el@((i,j):ls)
   | (i,j) `elem` ls = return (status, [], ls)
