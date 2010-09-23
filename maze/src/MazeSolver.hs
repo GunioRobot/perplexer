@@ -30,16 +30,10 @@ instance Read Status where
 executeRaw :: FilePath -> Command -> IO ()
 executeRaw fOut cmd = withFile fOut AppendMode (\h -> hPrint h cmd)
         
-executeRaw' :: FilePath -> [Command] -> IO ()
-executeRaw' fOut cs = forM_ cs $ executeRaw fOut
-
 execute :: FilePath -> FilePath -> Command -> IO Status
 execute fIn fOut command = do
   executeRaw fOut command
   withFile fIn ReadMode $ liftM read . hGetLine
-
-execute' :: FilePath -> FilePath -> [Command] -> IO ()
-execute' fIn fOut cs = forM_ cs $ execute fIn fOut
 
 incr :: Heading -> (Int,Int) -> (Int,Int)
 incr h (i,j) = case h of { N -> (i+1,j); S -> (i-1,j); W -> (i,j+1); E -> (i,j-1) }
@@ -51,7 +45,7 @@ tryAhead fIn fOut _ h l@(l1:ls) = do
   (s',c',l') <- move s fIn fOut h $ (incr h l1):l
   case s' of
     SUCCESS -> return ()
-    _ -> execute' fIn fOut [TURN LEFT,TURN LEFT,MOVE,TURN LEFT,TURN LEFT]
+    _ -> forM_ [TURN LEFT,TURN LEFT,MOVE,TURN LEFT,TURN LEFT] $ execute fIn fOut
   putStr "."
   hFlush stdout
   return (s',MOVE:c',l')
@@ -118,6 +112,6 @@ main = do
   putStr "\nWalking the path..."
   executeRaw fOut RESET
   consume fIn True
-  executeRaw' fOut c
+  forM_ c $ executeRaw fOut
   putStrLn "\nHere's the solved maze:\n"
   consume fIn False
