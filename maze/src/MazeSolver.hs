@@ -8,9 +8,9 @@ import Control.Concurrent
 import Data.Either
 
 data Status = Status (Bool,Bool,Bool) | SUCCESS deriving (Show, Eq)
-data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read, Enum)
-data Command = MOVE | TURN Direction | SHOW | RESET deriving (Show, Eq, Ord, Read)
-data Heading = N | W | S | E deriving (Show, Eq, Ord, Enum)
+data Direction = LEFT | RIGHT deriving (Show, Eq, Read)
+data Command = MOVE | TURN Direction | SHOW | RESET deriving (Show, Eq, Read)
+data Heading = N | W | S | E deriving (Show, Eq)
 type Location = (Int, Int)
 type Path = ([Command],[Location])
 type MazeMove = FilePath -> FilePath -> Status -> Heading -> Location -> [Location] -> IO (Either Path Path)
@@ -82,7 +82,7 @@ wallOrWay :: String -> Bool
 wallOrWay s = case s of { "wall" -> True; "corridor" -> False }
 
 main = do
-  (fIn:fOut:[]) <- getArgs
+  fIn:fOut:[] <- getArgs
   executeRaw fOut RESET >> consume fIn True
   putStrLn "\nHere is the Maze:" >> executeRaw fOut SHOW >> consume fIn False
   putStrLn "\nSolving Maze. Hang tight."
