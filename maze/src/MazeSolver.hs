@@ -4,64 +4,55 @@ import Data.List
 import System
 import System.IO
 import Control.Monad
-import System.Random ( mkStdGen )
 import Control.Concurrent
+import Data.Either
 
 data Status = Status (Bool,Bool,Bool) | SUCCESS deriving (Show, Eq)
 data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read, Enum)
 data Command = MOVE | TURN Direction | SHOW | RESET deriving (Show, Eq, Ord, Read)
 data Heading = N | W | S | E deriving (Show, Eq, Ord, Enum)
 type Location = (Int, Int)
-type MazeMove = FilePath -> FilePath -> Status -> Heading -> [Location] -> IO (Status,[Command],[Location])
-
-tryAhead :: MazeMove
-tryAhead _ _ s@(Status (_,True,_)) _ l = return (s,[],l)
-tryAhead fIn fOut _ h l@(l1:ls) = do
-  s <- execute fIn fOut MOVE
-  (s',c',l') <- move fIn fOut s h $ (incr h l1):l
-  case s' of
-    SUCCESS -> return ()
-    _ -> forM_ [TURN LEFT,TURN LEFT,MOVE,TURN LEFT,TURN LEFT] $ execute fIn fOut
-  putStr "." >> hFlush stdout
-  return (s',MOVE:c',l')
-
-tryTurn :: Direction -> MazeMove
-tryTurn LEFT _ _ s@(Status (True,_,_)) _ l = return (s,[],l)
-tryTurn RIGHT _ _ s@(Status (_,_,True)) _ l = return (s,[],l)
-tryTurn dir fIn fOut status h l = do
-  let rdir = case dir of { LEFT -> RIGHT; RIGHT -> LEFT }
-  s <- execute fIn fOut $ TURN dir
-  (s',c',l') <- tryAhead fIn fOut s (rotateHeading h dir) l
-  case s' of
-    st@SUCCESS -> return st
-    _ -> execute fIn fOut $ TURN rdir
-  return (s',(TURN dir):c',l')
+type Path = ([Command],[Location])
+type MazeMove = FilePath -> FilePath -> Status -> Heading -> Location -> [Location] -> IO (Either Path Path)
 
 move :: MazeMove
-move _ _ s@SUCCESS _ ls = return (s,[],ls)
-move fIn fOut status@(Status (b1,b2,b3)) h el@((i,j):ls)
-  | (i,j) `elem` ls = return (status,[],ls)
+move _ _ SUCCESS _ _ l = return $ Right ([],l)
+move fIn fOut status h cur@(i,j) ls
+  | (i,j) `elem` ls = return $ Left ([],ls)
   | otherwise = do
-      (s,c,l) <- tryTurn LEFT fIn fOut status h el
-      case s of
-        SUCCESS -> return (s,c,l)
-        _ -> do
-          (s,c,l) <- tryAhead fIn fOut status h el
-          case s of
-            SUCCESS -> return (s,c,l)
-            _ -> do
-              (s,c,l) <- tryTurn RIGHT fIn fOut status h el
-              return (s,c,l)
+      s <- tryTurn LEFT fIn fOut status h cur ls
+      s <- either (\(c,l) -> tryAhead fIn fOut status h cur l) (return . Right) s
+      either (\(c,l) -> tryTurn RIGHT fIn fOut status h cur l) (return . Right) s
+
+tryTurn :: Direction -> MazeMove
+tryTurn LEFT  _ _ (Status (True,_,_)) _ _ l = return $ Left ([],l)
+tryTurn RIGHT _ _ (Status (_,_,True)) _ _ l = return $ Left ([],l)
+tryTurn dir fIn fOut _ h cur l = do
+  let rdir = case dir of { LEFT -> RIGHT; RIGHT -> LEFT }
+  s <- execute fIn fOut $ TURN dir
+  s' <- tryAhead fIn fOut s (rotateHeading h dir) cur l
+  case s' of
+    Right (c,l') -> return $ Right ((TURN dir):c,l')
+    l' -> do { execute fIn fOut $ TURN rdir; return l' }
+
+tryAhead :: MazeMove
+tryAhead _ _ (Status (_,True,_)) _ _ l = return $ Left ([],l)
+tryAhead fIn fOut _ h cur ls = do
+  s <- execute fIn fOut MOVE
+  s' <- move fIn fOut s h (incr h cur) $ cur:ls
+  putStr "." >> hFlush stdout
+  case s' of
+    Right (c,l') -> return $ Right (MOVE:c,l')
+    l' -> do { forM_ [TURN LEFT,TURN LEFT,MOVE,TURN LEFT,TURN LEFT] $ execute fIn fOut; return l' }
 
 instance Read Status where
-  readsPrec i s =
-    let l@(l1:ls) = words s in
-      case l1 of
+  readsPrec _ s = case l1 of
         "\"Congratulations." -> [(SUCCESS,"")]
         _ -> [(Status (wallOrWay (l!!3), wallOrWay (l!!8), wallOrWay (l!!12)),"")]
+      where l@(l1:ls) = words s
 
 executeRaw :: FilePath -> Command -> IO ()
-executeRaw fOut cmd = withFile fOut AppendMode (\h -> hPrint h cmd)
+executeRaw fOut cmd = withFile fOut AppendMode $ \h -> hPrint h cmd
         
 execute :: FilePath -> FilePath -> Command -> IO Status
 execute fIn fOut command = do
@@ -88,31 +79,22 @@ rotateHeading h LEFT = case h of { N -> W; W -> S; S -> E; E -> N }
 rotateHeading h RIGHT = case h of { N -> E; W -> N; S -> W; E -> S }
 
 wallOrWay :: String -> Bool
-wallOrWay "wall" = True
-wallOrWay "corridor" = False
+wallOrWay s = case s of { "wall" -> True; "corridor" -> False }
 
-main :: IO ()
 main = do
   (fIn:fOut:[]) <- getArgs
-  executeRaw fOut RESET
-  consume fIn True
-  executeRaw fOut SHOW
-  putStrLn "\nHere is the Maze"
-  consume fIn False
+  executeRaw fOut RESET >> consume fIn True
+  putStrLn "\nHere is the Maze:" >> executeRaw fOut SHOW >> consume fIn False
   putStrLn "\nSolving Maze. Hang tight."
   t <- execute fIn fOut RESET
-  (s,c,l) <- move fIn fOut t N [(0,0)]
-  (s,c,l) <- case s of
-    SUCCESS -> return (s,c,l)
-    otherwise -> do
+  s <- move fIn fOut t N (0,0) []
+  (c,l) <- case s of
+    Right (c,l) -> return (c,l)
+    Left (c,l) -> do
       t <- execute fIn fOut $ TURN LEFT
-      (s,c,l) <- move fIn fOut t W l
-      return (s,(TURN LEFT):c,l)
-  putStrLn "\n\nHere's the path:"
-  print c
-  putStr "\nWalking the path..."
-  executeRaw fOut RESET
-  consume fIn True
-  forM_ c $ executeRaw fOut
-  putStrLn "\nHere's the solved maze:\n"
-  consume fIn False
+      Right (c,l) <- move fIn fOut t W (0,0) (init l)
+      return ((TURN LEFT):c,l)
+  putStrLn "\n\nHere's the path:" >> print c
+  executeRaw fOut RESET >> consume fIn True
+  putStr "\nWalking the path..." >> (forM_ c $ executeRaw fOut)
+  putStrLn "\nHere's the solved maze:\n" >> consume fIn False
