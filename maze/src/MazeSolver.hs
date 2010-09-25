@@ -38,6 +38,7 @@ tryTurn dir fIn fOut _ h cur l = do
 tryAhead :: MazeMove
 tryAhead _ _ (Status (_,True,_)) _ _ l = return $ Left ([],l)
 tryAhead fIn fOut _ h cur ls = do
+  let incr h (i,j) = case h of { N -> (i+1,j); S -> (i-1,j); W -> (i,j+1); E -> (i,j-1) }
   s <- execute fIn fOut MOVE
   s' <- move fIn fOut s h (incr h cur) $ cur:ls
   putStr "." >> hFlush stdout
@@ -50,6 +51,7 @@ instance Read Status where
         "\"Congratulations." -> [(SUCCESS,"")]
         _ -> [(Status (wallOrWay (l!!3), wallOrWay (l!!8), wallOrWay (l!!12)),"")]
       where l@(l1:ls) = words s
+            wallOrWay s = case s of { "wall" -> True; "corridor" -> False }
 
 executeRaw :: FilePath -> Command -> IO ()
 executeRaw fOut cmd = withFile fOut AppendMode $ \h -> hPrint h cmd
@@ -71,15 +73,8 @@ consume fIn silent = do
   hClose hIn
   if b then consume fIn silent else return ()
 
-incr :: Heading -> Location -> Location
-incr h (i,j) = case h of { N -> (i+1,j); S -> (i-1,j); W -> (i,j+1); E -> (i,j-1) }
-
-rotateHeading :: Heading -> Direction -> Heading
 rotateHeading h LEFT = case h of { N -> W; W -> S; S -> E; E -> N }
 rotateHeading h RIGHT = case h of { N -> E; W -> N; S -> W; E -> S }
-
-wallOrWay :: String -> Bool
-wallOrWay s = case s of { "wall" -> True; "corridor" -> False }
 
 main = do
   fIn:fOut:[] <- getArgs
