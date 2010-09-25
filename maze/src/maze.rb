@@ -43,7 +43,7 @@ class Maze
   def parent_orientation
     o = @orientation
     return :west if o == :east
-    return :east if o == west
+    return :east if o == :west
     return :north if o == :south
     return :south if o == :north
   end
@@ -57,7 +57,9 @@ class Maze
     end
     if @first_cell
       update_cell c
-    else
+    elsif @cell.visited?
+
+    elsif @cell.visited?
       c = Node.new(e, n, w, s, parent_direction(@orientation))
     end
     if @cell.unvisited_neighbors?
