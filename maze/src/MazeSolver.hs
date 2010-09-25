@@ -55,7 +55,7 @@ instance Read Status where
 
 executeRaw :: FilePath -> Command -> IO ()
 executeRaw fOut cmd = withFile fOut AppendMode $ \h -> hPrint h cmd
-        
+
 execute :: FilePath -> FilePath -> Command -> IO Status
 execute fIn fOut command = do
   executeRaw fOut command
@@ -73,7 +73,7 @@ consume fIn silent = do
   hClose hIn
   if b then consume fIn silent else return ()
 
-rotateHeading h LEFT = case h of { N -> W; W -> S; S -> E; E -> N }
+rotateHeading h LEFT  = case h of { N -> W; W -> S; S -> E; E -> N }
 rotateHeading h RIGHT = case h of { N -> E; W -> N; S -> W; E -> S }
 
 main = do
