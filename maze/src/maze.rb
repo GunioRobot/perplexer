@@ -73,7 +73,7 @@ class Maze
   end
 
   #give the actions required to turn
-  def orient so eo
+  def orient so, eo
     return :turn_left, :turn_right, :turn_around
   end
   def visit n, d
