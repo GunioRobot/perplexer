@@ -19,12 +19,15 @@ import Maze
 import Game
 
 data Direction = LEFT | RIGHT deriving (Show, Eq, Ord, Read)
-data Command = MOVE | TURN Direction | LOOK | NEW Int Int
+data Command = MOVE | BACK  | TURN Direction | LOOK | NEW Int Int
              | SHOW | RESET | SAVE | LOAD deriving (Show, Eq, Ord, Read)
 
 rotateHeading :: Heading -> Direction -> Heading
 rotateHeading h LEFT = case h of { N -> W; W -> S; S -> E; E -> N }
 rotateHeading h RIGHT = case h of { N -> E; W -> N; S -> W; E -> S }
+
+inverseHeading :: Heading -> Heading
+inverseHeading h = case h of { N -> S; W -> E; S -> N; E -> W }
 
 increaseLocation :: Array Location Walls -> Heading -> Location -> Location
 increaseLocation m h p@(i,j) =
@@ -39,6 +42,11 @@ next :: Command -> GameState
 next MOVE = do
   Game (Maze m, h, p@(p1:ps), l, g, sp) <- get
   let i = increaseLocation m h p1
+  put $ Game (Maze m, h, i:p, l, g, sp)
+
+next BACK = do
+  Game (Maze m, h, p@(p1:ps), l, g, sp) <- get
+  let i = increaseLocation m (inverseHeading h) p1
   put $ Game (Maze m, h, i:p, l, g, sp)
 
 next (TURN d) = do

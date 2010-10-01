@@ -4,12 +4,12 @@ import Data.List
 import System
 import System.IO
 import Control.Monad
-import Control.Concurrent
 import Data.Either
+import Control.Concurrent
 
 data Status = Status (Bool,Bool,Bool) | SUCCESS deriving (Show, Eq)
 data Direction = LEFT | RIGHT deriving (Show, Eq, Read)
-data Command = MOVE | TURN Direction | SHOW | RESET deriving (Show, Eq, Read)
+data Command = MOVE | BACK | TURN Direction | SHOW | RESET deriving (Show, Eq, Read)
 data Heading = N | W | S | E deriving (Show, Eq)
 type Location = (Int, Int)
 type Path = ([Command],[Location])
@@ -38,13 +38,13 @@ tryTurn dir fIn fOut _ h cur l = do
 tryAhead :: MazeMove
 tryAhead _ _ (Status (_,True,_)) _ _ l = return $ Left ([],l)
 tryAhead fIn fOut _ h cur ls = do
-  let incr h (i,j) = case h of { N -> (i+1,j); S -> (i-1,j); W -> (i,j+1); E -> (i,j-1) }
+  let incr h (i,j) = case h of { N -> (i,j+1); S -> (i,j-1); W -> (i-1,j); E -> (i+1,j) }
   s <- execute fIn fOut MOVE
   s' <- move fIn fOut s h (incr h cur) $ cur:ls
   putStr "." >> hFlush stdout
   case s' of
     Right (c,l') -> return $ Right (MOVE:c,l')
-    l' -> do { forM_ [TURN LEFT,TURN LEFT,MOVE,TURN LEFT,TURN LEFT] $ execute fIn fOut; return l' }
+    l' -> do { execute fIn fOut BACK; return l' }
 
 instance Read Status where
   readsPrec _ s = case l1 of
@@ -54,7 +54,7 @@ instance Read Status where
             wallOrWay s = case s of { "wall" -> True; "corridor" -> False }
 
 executeRaw :: FilePath -> Command -> IO ()
-executeRaw fOut cmd = withFile fOut AppendMode $ \h -> hPrint h cmd
+executeRaw fOut cmd = withFile fOut WriteMode $ \h -> hPrint h cmd
 
 execute :: FilePath -> FilePath -> Command -> IO Status
 execute fIn fOut command = do
@@ -66,9 +66,8 @@ consume fIn silent = do
   hIn <- openFile fIn ReadMode
   hSetBuffering hIn NoBuffering
   l <- hGetLine hIn
-  if (isPrefixOf "There" l || isPrefixOf "\"Congrat" l || silent)
-    then threadDelay 20000
-    else putStrLn l
+  if (isPrefixOf "There" l || isPrefixOf "\"Con" l || silent)
+    then threadDelay 20000 else  putStrLn l
   b <- hReady hIn
   hClose hIn
   if b then consume fIn silent else return ()
@@ -87,9 +86,9 @@ main = do
     Right (c,l) -> return (c,l)
     Left (c,l) -> do
       t <- execute fIn fOut $ TURN LEFT
-      Right (c,l) <- move fIn fOut t W (0,0) (init l)
+      Right (c,l) <- move fIn fOut t W (0,0) (filter (/=(0,0)) l)
       return ((TURN LEFT):c,l)
   putStrLn "\n\nHere's the path:" >> print c
   executeRaw fOut RESET >> consume fIn True
   putStr "\nWalking the path..." >> (forM_ c $ executeRaw fOut)
-  putStrLn "\nHere's the solved maze:\n" >> consume fIn False
+  putStrLn "\nHere's the solved maze:\n" >> hFlush stdout >> consume fIn False
