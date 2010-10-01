@@ -1,3 +1,5 @@
 .project
 *.out
 *.log
+*.hi
+*.o
