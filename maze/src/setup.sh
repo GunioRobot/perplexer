@@ -29,7 +29,7 @@ then
     rm mazeIn
 fi
 
-ghc -imaze -o MazeMain --make Main
+ghc -imaze -O2 -o MazeMain --make Main
 
 mkFifo mazeIn
 
