@@ -42,5 +42,5 @@ editDist v w = editDistance (const 2) (const 3) (\i j -> 1) v w
 
 main :: IO ()
 main = do
-  (a:b:[]) <- getArgs
+  a:b:[] <- getArgs
   print $ editDist a b
