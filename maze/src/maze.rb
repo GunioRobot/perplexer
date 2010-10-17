@@ -1,5 +1,23 @@
 #!/usr/bin/env ruby
 require 'node'
+#turn around and see what's behind
+#if I moved in my last step, then:
+###this is a new cell
+###if the cell is visited, a loop! return now or perish forever
+###add the observations to the new cell
+###attach this new cell to the 'current_cell' and make current_cell parent
+###update current_cell to this cell
+#else if i just turned
+###this is the same cell
+###add the observations if they did not exist
+#now we need to check if we should move or turn
+#if any side is dark, then turn
+#else add all unvisited cells and select a cell that has not been visited and move
+#if all cells have been visited, and we have not found a solution - then
+#this is a bad path. When we enter the cell, we need to know who the parent
+#cell is. Once we know this is a bad cell, we need to go to the parent
+#add observation to the current cell's node
+#decide if we should move or 
 
 class Maze
   #need to have the notion of just looking, and also moving
@@ -43,8 +61,8 @@ class Maze
   def create_neighbors l, c, r
     m = { :north => nil, :west => nil, :south => nil, :east => nil}
     m[opposite @orientation] = @cell
+    #p "debug: parent cell = #{m[opposite @orientation].parent_direction}" if $DEBUG && @cell
     if @orientation == :east
-
       m[:south] = Node.new(:north) if l == :corridor
       m[:east] = Node.new(:west) if c == :corridor
       m[:north] = Node.new(:south) if r == :corridor
@@ -61,7 +79,7 @@ class Maze
       m[:west] = Node.new(:east) if c == :corridor
       m[:south] = Node.new(:north) if r == :corridor
     end
-    p "debug:create_neighbors n= #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
+    p "debug:create_neighbors[node_#{@cell.id if @cell}][parent #{@cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
     return m[:north], m[:west], m[:south], m[:east]
   end
 
@@ -85,43 +103,63 @@ class Maze
   end
 
   #FIXME hack to update the first cell only
-  def update_cell cell, l, c, r
-    if c == :corridor
-      cell.south = Node.new(opposite @orientation) if c == :corridor
-    end
-    #p "cell = n = #{cell.north}, w = #{cell.west}, s = #{cell.south}, e = #{cell.east}" if $DEBUG
+  def update_first_cell cell, l, c, r
+    cell.south = Node.new(opposite @orientation) if c == :corridor
     return cell
   end
+  def update_cell c,p,n,w,s,e
+   c.north = n
+   c.south = s
+   c.east = e
+   c.west = w
+   c.parent_direction = p
+   return c
+  end
 
-  def update_graph l, c, r
-    p "debug:update_graph l = #{l}, c = #{c}, r = #{r}" if $DEBUG
-    n, w, s, e = create_neighbors(l, c, r)
+  def update_current_cell l, c, r
+    p "debug:update_current_cell l = #{l}, c = #{c}, r = #{r}" if $DEBUG
     if @cell.nil?
+      p "debug:update_current_cell:first time" if $DEBUG
       @first_cell = true
-      @root = @cell = Node.new(nil, n, w, s, e)
-      return :view_back #TODO check if this is correct
-    elsif @first_cell
-      @cell = update_cell @cell, l, c, r
+      @root = @cell = Node.new(nil)
+      n, w, s, e = create_neighbors(l, c, r)
+      @root = @cell = update_cell(@cell,nil,n,w,s,e)
+      return @cell
+    elsif @first_cell == true
+      p "debug:update_current_cell:updating first cell = #{@cell}" if $DEBUG
+      @cell = update_first_cell @cell, l, c, r
+      p "debug:update_current_cell:updated first cell = #{@cell}" if $DEBUG
       @cell.visited = true
       @first_cell = false
-    elsif @new_cell
-      p "debug:update_graph visiting new cell o = #{@orientation}" if $DEBUG
-      @cell = Node.new(opposite(@orientation),n, w, s, e)
+    elsif @new_cell == true
+      p "debug:update_current_cell:creating new cell" if $DEBUG
+      n, w, s, e = create_neighbors(l, c, r)
+      @cell = update_cell @cell,opposite(@orientation),n, w, s, e
+      p "debug:update_current_cell:created new cell = #{@cell} parent = #{@cell.parent} neighbors[#{@cell.neighbors}]" if $DEBUG
+      @new_cell = false
+    else
+      p "debug:update_current_cell:old cell = #{@cell}" if $DEBUG
     end
-
-      
-    if k = @cell.unvisited_neighbors?
-      p "debug:unvisited_neighbors.size = #{@cell.unvisited_neighbors.size}"
+    return @cell
+  end
+  def cell_to_visit cell
+    p "debug:cell_to_visit:cell = #{@cell}" if $DEBUG
+    return cell,:south if @first_cell 
+    k = cell.unvisited_neighbors?
+    p "debug:cell_to_visit:cell = #{k}" if $DEBUG
+    if !k.nil?
       @new_cell = true
       p "debug:visiting neighbor = #{k[1]}" if $DEBUG
-      return visit k[0], k[1] #@cell.unvisited_neighbor
-    elsif !@cell.parent_direction.nil?
-      @new_cell = false
-      p "debug:visiting parent = #{@cell.parent_direction}" if $DEBUG
-      return visit @cell.parent, @cell.parent_direction
-    elsif @cell.parent_direction.nil?
-      p "error: reached root without finding end"
-      return :halt
+      return k[0], k[1] #@cell.unvisited_neighbor
+    elsif cell.parent != nil
+      p "debug:visiting parent = #{cell.parent_direction}" if $DEBUG
+      return cell.parent, cell.parent_direction
+    elsif cell.parent.nil? || cell.parent_direction.nil?
+      p "warn: reached root without finding end"
+      return nil,nil
+    else
+      p "error: reached dangling condition"
+      exit
     end
   end
 
@@ -140,41 +178,36 @@ class Maze
   end
 
   def visit n, d
+    #traverse @root
+    if n == nil
+      return :halt
+    end
+    if @first_cell
+      @orientation = opposite @orientation
+      return :view_back
+    end
     n.visited = true
-    p "debug: orientation = #{@orientation}, d = #{d}" if $DEBUG
-    actions = orient(@orientation, d)
+    p "debug:visiting n = #{n}, n.parent = #{n.parent}" if $DEBUG
+    actions = orient @orientation,d
     @orientation = d
+    p "debug:reached new cell, parent = #{@cell.parent_direction}" if $DEBUG
     actions
   end
 
   def process l, c, r
-      @actions = update_graph(l, c, r)
-      if @actions == :view_back
-        @orientation = opposite @orientation
-      end
-      return @actions
+      cell,direction = cell_to_visit update_current_cell(l, c, r)
+      actions = visit cell,direction
+      @cell = cell
+      return actions
   end
-      #turn around and see what's behind
-    #if I moved in my last step, then:
-    ###this is a new cell
-    ###if the cell is visited, a loop! return now or perish forever
-    ###add the observations to the new cell
-    ###attach this new cell to the 'current_cell' and make current_cell parent
-    ###update current_cell to this cell
-    #else if i just turned
-    ###this is the same cell
-    ###add the observations if they did not exist
-    #now we need to check if we should move or turn
-    #if any side is dark, then turn
-    #else add all unvisited cells and select a cell that has not been visited and move
-    #if all cells have been visited, and we have not found a solution - then
-    #this is a bad path. When we enter the cell, we need to know who the parent
-    #cell is. Once we know this is a bad cell, we need to go to the parent
-    #add observation to the current cell's node
-    #decide if we should move or 
-
 end
 
+def traverse node
+  n = node.neighbors
+  p "visiting node[#{node}] -> neighbors #{n}"
+  node.traversed = true
+  n.each {|x| traverse x if !x.traversed ; x.traversed = true}
+end
 def main
   m = Maze.new
   m.init(ARGV[0], ARGV[1])
