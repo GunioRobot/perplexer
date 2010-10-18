@@ -60,8 +60,7 @@ class Maze
   #FIXME this is ugly as hell, lets clean it up when this starts working
   def create_neighbors cell,orientation,l, c, r
     m = { :north => nil, :west => nil, :south => nil, :east => nil}
-    p "debug:create_neighbors:start::[#{cell}]o[#{orientation}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
-    #m[opposite orientation] = cell
+    m[opposite orientation] = cell
     #p "debug: parent cell = #{m[opposite @orientation].parent_direction}" if $DEBUG && @cell
     if orientation == :east
       m[:south] = Node.new(:north) if l == :corridor
@@ -80,7 +79,7 @@ class Maze
       m[:west] = Node.new(:east) if c == :corridor
       m[:south] = Node.new(:north) if r == :corridor
     end
-    p "debug:create_neighbors:end::[#{cell}]o[#{orientation}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
+    p "debug:create_neighbors[node_#{cell.id if cell}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
     return m[:north], m[:west], m[:south], m[:east]
   end
 
@@ -131,7 +130,7 @@ class Maze
     elsif @first_cell == true
       p "debug:update_current_cell:updating first cell = #{@cell}" if $DEBUG
       @cell = update_first_cell @cell, l, c, r
-      p "debug:update_current_cell:updated first cell = #{@cell}[#{@cell.parent}]" if $DEBUG
+      p "debug:update_current_cell:updated first cell = #{@cell}" if $DEBUG
       @cell.visited = true
       @first_cell = false
     elsif @new_cell == true
@@ -201,7 +200,7 @@ class Maze
       cell,direction = cell_to_visit update_current_cell(l, c, r)
       actions = visit cell,direction
       @cell = cell
-      p "debug:process cell = #{cell} parent = #{cell.parent if cell}" if $DEBUG
+      p "debug:process cell = #{cell} parent = #{cell.parent}" if $DEBUG
       return actions
   end
 end

@@ -44,6 +44,6 @@ class Node
     return n
   end
   def to_s
-    return "[node_#{@id}]"
+    return "[node_#{@id}][#{@parent_direction}]"
   end
 end
