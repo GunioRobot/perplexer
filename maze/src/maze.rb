@@ -102,6 +102,7 @@ class Maze
       m[:west] = Node.new(:east) if c == :corridor
       m[:south] = Node.new(:north) if r == :corridor
     end
+    m.each_key{|k| m[k].parent_node = cell if !m[k].nil?}
     p "debug:create_neighbors:end::[#{cell}]o[#{orientation}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
     return m[:north], m[:west], m[:south], m[:east]
   end

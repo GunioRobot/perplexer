@@ -1,7 +1,7 @@
 require 'pp'
 class Node
   @@global_id = 0
-  attr_accessor :visited, :type, :north, :south, :east, :west, :parent_direction, :unvisited_neighbors,:id,:traversed
+  attr_accessor :visited, :type, :north, :south, :east, :west, :parent_direction, :unvisited_neighbors,:id,:traversed,:parent_node
 
   def initialize p, n=nil, w=nil, s=nil, e=nil
     @@global_id += 1
@@ -33,8 +33,21 @@ class Node
   def parent
     p "debug:parent:node:#{self}:parent:#{@parent_direction}" if $DEBUG
     return nil if @parent_direction.nil?
-    return instance_variable_get("@#{@parent_direction.to_s}")
+    @parent_node
   end
+#  def parent=p
+#    case @parent_direction
+#    when :north
+#      @north = p
+#    when :south
+#      @south = p
+#    when :east
+#      @east = p
+#    when :west
+#      @west = p
+#    end
+#  end
+
   def neighbors
     n = []
     n<< @north if @north
