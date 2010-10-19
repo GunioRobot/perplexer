@@ -12,6 +12,7 @@ class Node
     @east, @north, @west, @south, @parent_direction = e, n, w, s, p
     #FIXME *puke*, please tell me this will be done in a better way
     @traversed = false
+    @parent_node = nil
     end
 
   def unvisited_neighbors?

@@ -21,44 +21,60 @@ require 'node'
 
 class Maze
   #need to have the notion of just looking, and also moving
-  attr_accessor :in_file, :out_file, :root, :cell, :orientation, :action, :first_cell, :new_cell
+  attr_accessor :in_file, :out_file, :root, :cell, :orientation, :action, :first_cell, :new_cell, :commands, :inp,:out
 
   def initialize
     @orientation = :north
     @cell = nil
     @first_cell = false
     @new_cell = false
+    @commands = []
   end
 
   def init inp, out
-    @in_file = open(inp, 'r+')
-    @out_file = open(out, 'w+')
+    p "debug: input = #{inp} output = #{out}" if $DEBUG
+    @inp = inp
+    @out = out
   end
 
   def receive count=1
+    @in_file = open(@inp, 'r')
     r = ""
     count.times { |c| 
     r = @in_file.gets.strip
     p "debug: r = #{r}" if $DEBUG
     }
+    @in_file.close
     return r
   end
 
   def send commands
+    @out_file = open(@out, 'w+')
     count = 0
     commands.each {|c| 
-      @out_file.write c
+      p "debug:send command = #{c}" if $DEBUG
+      @out_file.write (c+"\n")
+      @commands<< c
       count += 1
     }
-    @out_file.flush
+    @out_file.close
     count
   end
 
   def parse p
     m = p.match(/There is a (.*) to the left, a (.*) ahead, and a (.*) to the right./)
+    if !m.nil?
     l, c, r = m[1].to_sym, m[2].to_sym, m[3].to_sym
     p "debug: l = #{l}, c = #{c}, r = #{r}" if $DEBUG
     return l, c, r
+    elsif m = p.match(/Congratulations. You did it/)
+      p "done!"
+      p @actions
+      exit
+    else
+      p "fatal:unable to parse #{p}" if $DEBUG
+      exit
+    end
   end
 
   def translate actions
@@ -66,15 +82,16 @@ class Maze
     actions.each {|x| 
       case x
       when :turn_left
-      t<< "TURN LEFT"
+      t += ["TURN LEFT"]
       when :move
-        t<< "MOVE"
+        t += ["MOVE"]
       when :turn_right
-        t<< "TURN RIGHT"
+        t += ["TURN RIGHT"]
       when :turn_around
-        t<< ["TURN_LEFT","TURN_LEFT"]
+        t += ["TURN LEFT","TURN LEFT"]
       end
     }
+    p "debug:translate #{actions} -> #{t}" if $DEBUG
     return t
   end
 
@@ -220,7 +237,8 @@ class Maze
     actions
   end
 
-  def process l, c, r
+  def process view
+      l,c,r = view[0],view[1],view[2]
       cell,direction = cell_to_visit update_current_cell(l, c, r)
       actions = visit cell,direction
       @cell = cell
@@ -242,4 +260,6 @@ def main
   while i = m.receive(count)
     count = m.send m.translate m.process m.parse i
   end
+  p @commands
 end
+main

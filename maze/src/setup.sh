@@ -31,14 +31,14 @@ fi
 
 ghc -imaze -O2 -o MazeMain --make Main
 
-mkFifo mazeIn
+mkfifo mazeIn
 
 if [ -e mazeOut ]
 then
     rm mazeOut
 fi
 
-mkFifo mazeOut
+mkfifo mazeOut
 
 tail -f mazeIn | ./MazeMain $rows $columns $seed > mazeOut &
 
