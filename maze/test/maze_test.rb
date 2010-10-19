@@ -19,7 +19,7 @@ class MazeTest < Test::Unit::TestCase
 
   def test_process
     #facing north
-    e = :view_back
+    e = [:turn_around]
     a = @m.process(:wall,:corridor,:wall)
     assert_equal(e,a)
     #facing south
@@ -75,7 +75,7 @@ class MazeTest < Test::Unit::TestCase
   end
 
   def test_orient
-    assert_equal :move, @m.orient(:east, :east)
+    assert_equal [:move], @m.orient(:east, :east)
     assert_equal [:turn_left,:move], @m.orient(:north, :east)
   end
 end

@@ -35,15 +35,23 @@ class Maze
     @out_file = open(out, 'w+')
   end
 
-  def receive
+  def receive count=1
+    r = ""
+    count.times { |c| 
     r = @in_file.gets.strip
     p "debug: r = #{r}" if $DEBUG
+    }
     return r
   end
 
-  def send o
-    @out_file.write o
+  def send commands
+    count = 0
+    commands.each {|c| 
+      @out_file.write c
+      count += 1
+    }
     @out_file.flush
+    count
   end
 
   def parse p
@@ -53,7 +61,21 @@ class Maze
     return l, c, r
   end
 
-  def translate t
+  def translate actions
+    t = []
+    actions.each {|x| 
+      case x
+      when :turn_left
+      t<< "TURN LEFT"
+      when :move
+        t<< "MOVE"
+      when :turn_right
+        t<< "TURN RIGHT"
+      when :turn_around
+        t<< ["TURN_LEFT","TURN_LEFT"]
+      end
+    }
+    return t
   end
 
   #determine where each cell goes
@@ -168,13 +190,13 @@ class Maze
 
   #give the actions required to turn
   def orient so, eo
-    return :move if eo == so
+    return [:move] if eo == so
     if eo == opposite(so)
-      return :turn_around,:move
+      return [:turn_around,:move]
     elsif eo == left(so)
-      return :turn_left,:move
+      return [:turn_left,:move]
     elsif eo == right(so)
-      return :turn_right,:move
+      return [:turn_right,:move]
     end
       p "error: unknown orientation for so = #{so}, eo = #{eo}" if $DEBUG
       return :error
@@ -187,7 +209,7 @@ class Maze
     end
     if @first_cell
       @orientation = opposite @orientation
-      return :view_back
+      return [:turn_around]
     end
     n.visited = true
     p "debug:visiting n = #{n}, n.parent = #{n.parent}" if $DEBUG
@@ -215,7 +237,8 @@ end
 def main
   m = Maze.new
   m.init(ARGV[0], ARGV[1])
-  while i = m.receive
-    m.send m.translate m.process m.parse i
+  count = 1
+  while i = m.receive(count)
+    count = m.send m.translate m.process m.parse i
   end
 end
