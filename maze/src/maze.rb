@@ -69,7 +69,7 @@ class Maze
     return l, c, r
     elsif m = p.match(/Congratulations. You did it/)
       p "done!"
-      p @actions
+      p @commands
       exit
     else
       p "fatal:unable to parse #{p}" if $DEBUG
