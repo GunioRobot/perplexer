@@ -103,23 +103,23 @@ class Maze
     #m[opposite orientation] = cell
     #p "debug: parent cell = #{m[opposite @orientation].parent_direction}" if $DEBUG && @cell
     if orientation == :east
-      m[:south] = Node.new(:north) if l == :corridor
-      m[:east] = Node.new(:west) if c == :corridor
-      m[:north] = Node.new(:south) if r == :corridor
+      m[:south] = Node.new(cell,:north) if l == :corridor
+      m[:east] = Node.new(cell,:west) if c == :corridor
+      m[:north] = Node.new(cell,:south) if r == :corridor
     elsif orientation == :north
-      m[:east] = Node.new(:west) if l == :corridor
-      m[:north] = Node.new(:south) if c == :corridor
-      m[:west] = Node.new(:east) if r == :corridor
+      m[:east] = Node.new(cell,:west) if l == :corridor
+      m[:north] = Node.new(cell,:south) if c == :corridor
+      m[:west] = Node.new(cell,:east) if r == :corridor
     elsif orientation == :south
-      m[:west] = Node.new(:east) if l == :corridor
-      m[:south] = Node.new(:north) if c == :corridor
-      m[:east] = Node.new(:west) if r == :corridor
+      m[:west] = Node.new(cell,:east) if l == :corridor
+      m[:south] = Node.new(cell,:north) if c == :corridor
+      m[:east] = Node.new(cell,:west) if r == :corridor
     elsif orientation == :west
-      m[:north] = Node.new(:south) if l == :corridor
-      m[:west] = Node.new(:east) if c == :corridor
-      m[:south] = Node.new(:north) if r == :corridor
+      m[:north] = Node.new(cell,:south) if l == :corridor
+      m[:west] = Node.new(cell,:east) if c == :corridor
+      m[:south] = Node.new(cell,:north) if r == :corridor
     end
-    m.each_key{|k| m[k].parent_node = cell if !m[k].nil?}
+    #m.each_key{|k| m[k].parent = cell if !m[k].nil?}
     p "debug:create_neighbors:end::[#{cell}]o[#{orientation}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
     return m[:north], m[:west], m[:south], m[:east]
   end
@@ -145,16 +145,15 @@ class Maze
 
   #FIXME hack to update the first cell only
   def update_first_cell cell, l, c, r
-    cell.south = Node.new(opposite @orientation) if c == :corridor
+    cell.south = Node.new(cell,opposite(@orientation)) if c == :corridor
     return cell
   end
-  def update_cell c,p,n,w,s,e
-    p "debug:update_cell[#{c}]:p=[#{p}] n = #{n} w = #{w} s = #{s} e = #{e}" if $DEBUG
+  def update_cell c,n,w,s,e
+    p "debug:update_cell[#{c}]: n = #{n} w = #{w} s = #{s} e = #{e}" if $DEBUG
    c.north = n
    c.south = s
    c.east = e
    c.west = w
-   c.parent_direction = p
    return c
   end
 
@@ -163,9 +162,9 @@ class Maze
     if @cell.nil?
       p "debug:update_current_cell:first time" if $DEBUG
       @first_cell = true
-      @root = @cell = Node.new(nil)
+      @root = @cell = Node.new(nil,nil)
       n, w, s, e = create_neighbors(@cell,@orientation,l, c, r)
-      @root = @cell = update_cell(@cell,nil,n,w,s,e)
+      @root = @cell = update_cell(@cell,n,w,s,e)
       p "debug:update_current_cell:created new cell = #{@cell} parent = #{@cell.parent} neighbors[#{@cell.neighbors}]" if $DEBUG
       return @cell
     elsif @first_cell == true
@@ -177,7 +176,7 @@ class Maze
     elsif @new_cell == true
       p "debug:update_current_cell:creating new cell" if $DEBUG
       n, w, s, e = create_neighbors(@cell,@orientation,l, c, r)
-      @cell = update_cell @cell,opposite(@orientation),n, w, s, e
+      @cell = update_cell @cell,n, w, s, e
       p "debug:update_current_cell:created new cell = #{@cell} parent = #{@cell.parent} neighbors[#{@cell.neighbors}]" if $DEBUG
       @new_cell = false
     else
@@ -188,7 +187,7 @@ class Maze
   def cell_to_visit cell
     p "debug:cell_to_visit:cell = #{@cell}" if $DEBUG
     return cell,:south if @first_cell 
-    k = cell.unvisited_neighbors?
+    k = cell.next_unvisited_neighbor
     p "debug:cell_to_visit:cell = #{k}" if $DEBUG
     if !k.nil?
       @new_cell = true
@@ -262,4 +261,4 @@ def main
   end
   p @commands
 end
-main
+#main
