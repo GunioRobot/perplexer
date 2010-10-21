@@ -20,15 +20,13 @@ require 'node'
 #decide if we should move or 
 
 class Maze
-  #need to have the notion of just looking, and also moving
-  attr_accessor :in_file, :out_file, :root, :cell, :orientation, :action, :first_cell, :new_cell, :commands, :inp,:out
+  attr_accessor :in_file, :out_file, :root, :orientation, :commands, :inp,:out,:incomplete_parent,:current_cell,:nw,:ew
 
   def initialize
     @orientation = :north
-    @cell = nil
-    @first_cell = false
-    @new_cell = false
     @commands = []
+    @incomplete_parent = true
+    @nw,@ew = 0,0
   end
 
   def init inp, out
@@ -95,31 +93,13 @@ class Maze
     return t
   end
 
-  #determine where each cell goes
-  #FIXME this is ugly as hell, lets clean it up when this starts working
   def create_neighbors cell,orientation,l, c, r
     m = { :north => nil, :west => nil, :south => nil, :east => nil}
     p "debug:create_neighbors:start::[#{cell}]o[#{orientation}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
-    #m[opposite orientation] = cell
-    #p "debug: parent cell = #{m[opposite @orientation].parent_direction}" if $DEBUG && @cell
-    if orientation == :east
-      m[:south] = Node.new(cell,:north) if l == :corridor
-      m[:east] = Node.new(cell,:west) if c == :corridor
-      m[:north] = Node.new(cell,:south) if r == :corridor
-    elsif orientation == :north
-      m[:east] = Node.new(cell,:west) if l == :corridor
-      m[:north] = Node.new(cell,:south) if c == :corridor
-      m[:west] = Node.new(cell,:east) if r == :corridor
-    elsif orientation == :south
-      m[:west] = Node.new(cell,:east) if l == :corridor
-      m[:south] = Node.new(cell,:north) if c == :corridor
-      m[:east] = Node.new(cell,:west) if r == :corridor
-    elsif orientation == :west
-      m[:north] = Node.new(cell,:south) if l == :corridor
-      m[:west] = Node.new(cell,:east) if c == :corridor
-      m[:south] = Node.new(cell,:north) if r == :corridor
-    end
-    #m.each_key{|k| m[k].parent = cell if !m[k].nil?}
+    ld,rd,od = left(orientation),right(orientation),opposite(orientation)
+    m[ld] = Node.new(cell,opposite(ld)) if l == :corridor
+    m[rd] = Node.new(cell,opposite(rd)) if r == :corridor
+    m[orientation] = Node.new(cell,od) if c == :corridor
     p "debug:create_neighbors:end::[#{cell}]o[#{orientation}][parent #{cell.parent}] n = #{m[:north]} w = #{m[:west]}, s = #{m[:south]} e = #{m[:east]}" if $DEBUG
     return m[:north], m[:west], m[:south], m[:east]
   end
@@ -129,7 +109,6 @@ class Maze
     return :east if o == :west
     return :north if o == :south
     return :south if o == :north
-   # p "error: could not return opposite for o = #{o}" if $DEBUG
   end
   
   def left o
@@ -143,56 +122,43 @@ class Maze
     opposite left o
   end
 
-  #FIXME hack to update the first cell only
-  def update_first_cell cell, l, c, r
-    cell.south = Node.new(cell,opposite(@orientation)) if c == :corridor
-    return cell
-  end
   def update_cell c,n,w,s,e
     p "debug:update_cell[#{c}]: n = #{n} w = #{w} s = #{s} e = #{e}" if $DEBUG
-   c.north = n
-   c.south = s
-   c.east = e
-   c.west = w
+   c.north = n if c.north.nil?
+   c.south = s if c.south.nil?
+   c.east = e if c.east.nil?
+   c.west = w if c.west.nil?
    return c
   end
 
-  def update_current_cell l, c, r
-    p "debug:update_current_cell l = #{l}, c = #{c}, r = #{r}" if $DEBUG
-    if @cell.nil?
+  def update_current_cell cell,l, c, r
+    p "debug:update_current_cell cell = #{cell} visited? = #{cell.visited if cell} l = #{l}, c = #{c}, r = #{r}" if $DEBUG
+    if cell.nil?
       p "debug:update_current_cell:first time" if $DEBUG
-      @first_cell = true
-      @root = @cell = Node.new(nil,nil)
-      n, w, s, e = create_neighbors(@cell,@orientation,l, c, r)
-      @root = @cell = update_cell(@cell,n,w,s,e)
-      p "debug:update_current_cell:created new cell = #{@cell} parent = #{@cell.parent} neighbors[#{@cell.neighbors}]" if $DEBUG
-      return @cell
-    elsif @first_cell == true
-      p "debug:update_current_cell:updating first cell = #{@cell}" if $DEBUG
-      @cell = update_first_cell @cell, l, c, r
-      p "debug:update_current_cell:updated first cell = #{@cell}[#{@cell.parent}]" if $DEBUG
-      @cell.visited = true
-      @first_cell = false
-    elsif @new_cell == true
-      p "debug:update_current_cell:creating new cell" if $DEBUG
-      n, w, s, e = create_neighbors(@cell,@orientation,l, c, r)
-      @cell = update_cell @cell,n, w, s, e
-      p "debug:update_current_cell:created new cell = #{@cell} parent = #{@cell.parent} neighbors[#{@cell.neighbors}]" if $DEBUG
-      @new_cell = false
-    else
-      p "debug:update_current_cell:old cell = #{@cell}" if $DEBUG
+      @root = cell = Node.new(nil,nil)
     end
-    return @cell
+    if cell.parent.nil? || !cell.visited
+      p "debug:update_cell:start::cell = #{cell} parent = #{cell.parent} neighbors[#{cell.neighbors}]" if !cell.nil? && $DEBUG
+      n, w, s, e = create_neighbors(cell,@orientation,l, c, r)
+      cell = update_cell(cell,n,w,s,e)
+      p "debug:update_cell:end::cell = #{cell} parent = #{cell.parent} neighbors[#{cell.neighbors}]" if !cell.nil? && $DEBUG
+      cell.visited = true
+      p "debug:update_current_cell:created new cell = #{cell} parent = #{cell.parent} neighbors[#{cell.neighbors}]" if $DEBUG
+    end
+    return cell
   end
+
+  attr_accessor 
   def cell_to_visit cell
-    p "debug:cell_to_visit:cell = #{@cell}" if $DEBUG
-    return cell,:south if @first_cell 
+    p "debug:cell_to_visit:cell = #{cell}" if $DEBUG
+    if cell.parent.nil? && @incomplete_parent
+      return cell,:south
+    end
     k = cell.next_unvisited_neighbor
-    p "debug:cell_to_visit:cell = #{k}" if $DEBUG
+    p "debug:cell_to_visit:unvisited_neighbor = #{k}" if $DEBUG
     if !k.nil?
-      @new_cell = true
       p "debug:visiting neighbor = #{k[1]}" if $DEBUG
-      return k[0], k[1] #@cell.unvisited_neighbor
+      return k[0], k[1]
     elsif cell.parent != nil
       p "debug:visiting parent = #{cell.parent_direction}" if $DEBUG
       return cell.parent, cell.parent_direction
@@ -219,28 +185,27 @@ class Maze
       return :error
   end
 
-  def visit n, d
-    #traverse @root
-    if n == nil
+  def visit cell, d
+    if cell == nil
       return :halt
     end
-    if @first_cell
+    if cell.parent.nil? && @incomplete_parent
       @orientation = opposite @orientation
+      @incomplete_parent = false
       return [:turn_around]
     end
-    n.visited = true
-    p "debug:visiting n = #{n}, n.parent = #{n.parent}" if $DEBUG
+    p "debug:visiting cell = #{cell}, cell.parent = #{cell.parent}" if $DEBUG
     actions = orient @orientation,d
     @orientation = d
-    p "debug:reached new cell, parent = #{@cell.parent_direction}" if $DEBUG
+    p "debug:reached new cell, parent = #{cell.parent_direction}" if $DEBUG
     actions
   end
 
   def process view
       l,c,r = view[0],view[1],view[2]
-      cell,direction = cell_to_visit update_current_cell(l, c, r)
+      cell,direction = cell_to_visit update_current_cell(@current_cell,l, c, r)
       actions = visit cell,direction
-      @cell = cell
+      @current_cell = cell
       p "debug:process cell = #{cell} parent = #{cell.parent if cell}" if $DEBUG
       return actions
   end
@@ -261,4 +226,4 @@ def main
   end
   p @commands
 end
-main
+main if ARGV.size == 2
