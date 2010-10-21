@@ -261,4 +261,4 @@ def main
   end
   p @commands
 end
-#main
+main
