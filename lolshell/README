@@ -1,0 +1,15 @@
+This is a very simple shell. It currently implements the following:
+
+   1. If the word is a built-in command, then it executes the command in the same process
+   2. If not, it assumes that the full path of an executable is provided, and it executes it in a child process
+   3. =&= - Processes can be sent to the background with =&=
+   4. =jobs= lists all background jobs
+   5. =ctrl-c= - delivers =SIGINT= to the process in the foreground
+   6. =ctrl-z= - delivers =SIGSTP= to each process in the process in the foreground
+   7. =bg job= Run the job in the background that is currently stopped
+   8. =fg job= Change a stopped or running background job to run in the foreground
+   9. =kill job= terminate the job
+   10. => and <= Support stdin/stdout redirection
+   11. =quit= terminate the shell
+   12. reap zombies
+   =job= can either be _PID_ or _JID_
