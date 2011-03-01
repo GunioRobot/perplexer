@@ -20,26 +20,26 @@ class MazeTest < Test::Unit::TestCase
   def test_process
     #facing north
     e = [:turn_around]
-    a = @m.process(:wall,:corridor,:wall)
+    a = @m.process([:wall,:corridor,:wall])
     assert_equal(e,a)
     #facing south
     e = [:turn_around,:move]
-    a = @m.process(:wall,:wall,:wall)
+    a = @m.process([:wall,:wall,:wall])
     assert_equal(e,a)
     #facing north, corridor to west
     e = [:turn_right,:move]
-    a = @m.process(:wall,:wall,:corridor)
+    a = @m.process([:wall,:wall,:corridor])
     assert_equal(e,a)
     p "facing west" if $DEBUG
     #facing west, all walls
     e = [:turn_around,:move]
-    a = @m.process(:wall,:wall,:wall)
+    a = @m.process([:wall,:wall,:wall])
     assert_equal(e,a)
     "p facing east" if $DEBUG
 
     #facing east, corridor to east
     e = [:turn_left,:move]
-    a = @m.process(:wall,:wall,:wall)
+    a = @m.process([:wall,:wall,:wall])
     assert_equal(e,a)
 
   end
