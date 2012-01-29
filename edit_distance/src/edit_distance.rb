@@ -15,7 +15,7 @@ class EditDistance
       return @table[i][x] = edit_distance(l,t,i+1,x+1)
     else
       return @table[i][x] if !@table[i][x].nil?
-      ci = @insert + edit_distance(l,t,i+1,x) 
+      ci = @insert + edit_distance(l,t,i+1,x)
       cr = @replace + edit_distance(l,t,i+1,x+1)
       cd = @delete + edit_distance(l,t,i+1,x)
       return @table[i][x] = [ci,cr,cd].min
@@ -23,7 +23,7 @@ class EditDistance
   end
   def transform(op,l,t,i,j)
     j = t.size if j > t.size
-    t[0,j] + l[i,l.size] 
+    t[0,j] + l[i,l.size]
   end
 
   #pseudocode: start form the first cell, keep jumping to the
@@ -49,13 +49,13 @@ class EditDistance
   def edit_distance_bt(l,t)
     res = [{:op => :init, :str => l}]
     i,j = 0,0,0,0
-    while (i < l.size || j < t.size) 
+    while (i < l.size || j < t.size)
       op,min,c1,c2,c3 = :nop,0,nil,nil,nil
       if i == (l.size-1) && (j == t.size-1) && @table[i][j] != 0
         min,op = @table[i][j],:replace
       elsif j == t.size
         op = :delete
-      elsif i == l.size 
+      elsif i == l.size
         op = :insert
       else
         c0 = @table[i][j]

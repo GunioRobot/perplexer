@@ -7,7 +7,7 @@
 def linear_partition(l,k,w,mtable)
   return nil if w == 0 && k == 1
   return mtable[w-1][k-1] = (0..w-1).inject(0){|s,x| s+= l[x]} if k == 1
-  return mtable[w-1][k-1] if mtable[w-1][k-1] != nil 
+  return mtable[w-1][k-1] if mtable[w-1][k-1] != nil
   min = 0
   (w-1).downto(0) { |j|
     s1 = linear_partition(l,k-1,j,mtable)
@@ -15,7 +15,7 @@ def linear_partition(l,k,w,mtable)
     s1 = s2 if s1.nil? || s2 > s1
     min = s1 if (min > s1 || j == (w-1) )
     mtable[w-1][k-1] = min
-  } 
+  }
   return min
 end
 

@@ -1,4 +1,4 @@
-% init the alphabet to use during edit distance calculation 
+% init the alphabet to use during edit distance calculation
 init(A,B) :- append(A,B,C), dedup(C,D), retractall(letters(_)), asserta(letters(D)).
 
 dedup([],[]).
@@ -10,11 +10,11 @@ cs(H) :- letters(L), member(H,L).
 rem([X|R],X,R).
 rem([F|R],X,[F|S]) :- rem(R,X,S).
 
-% replace any given element in a list 
+% replace any given element in a list
 rep([X|R],Y,[Y|R]) :- X \= Y.
 rep([X|R],Y,[X|S]) :- rep(R,Y,S).
 
-% insert any given element into a list 
+% insert any given element into a list
 ins([X|R],Y,[X,Y|R]).
 ins([X|R],Y,[Y,X|R]).
 ins([X|R],Y,[X|S]) :- ins(R,Y,S).
@@ -50,7 +50,7 @@ edist(A,B,[X|R],AC,C) :- ccalc(AC,CC), (t1(A,X), dcalc(A,B,X), edist(X,B,R,CC,C)
                                         t2(A,X), dcalc(A,B,X), edist(X,B,R,CC,C);
                                         t3(A,X), dcalc(A,B,X), edist(X,B,R,CC,C)).
 
-% is this result better than the last ? 
+% is this result better than the last ?
 valid(B,R) :- best(B1,R1), R < R1, retractall(best(_,_)), asserta(best(B,R)), !.
 
 % custom findall like rule
